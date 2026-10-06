@@ -85,6 +85,8 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddProblemDetails();
 
+builder.Services.AddExceptionHandler<ErrorLoggingHandler>();
+
 builder.Services.AddOpenApi();
 
 builder.Services.AddCors(options =>
@@ -150,7 +152,24 @@ if (!builder.Environment.IsEnvironment("Testing"))
 
 var app = builder.Build();
 
+app.Use(async (context, next) =>
+{
+    SecurityHeaders.Apply(context);
+    await next();
+});
+app.UseExceptionHandler();
+
 app.UseMiddleware<ErrorCaptureMiddleware>();
+
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    if (app.Environment.IsProduction())
+    {
+        app.UseHsts();
+    }
+
+    app.UseHttpsRedirection();
+}
 
 if (app.Environment.IsDevelopment())
 {
