@@ -1,10 +1,27 @@
 <div class="min-h-screen bg-paper text-ink">
   <header class="border-b border-line bg-panel">
-    <div class="mx-auto flex w-full max-w-5xl items-center px-4 py-3 sm:px-6">
-      <p class="text-base font-semibold tracking-tight">Fieldbook</p>
+    <div
+      class="mx-auto flex w-full max-w-5xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8"
+    >
+      <a class="text-base font-semibold tracking-tight" routerLink="/todos">Fieldbook</a>
+      @if (auth.isAuthenticated()) {
+        <div class="flex min-w-0 items-center justify-between gap-3 sm:justify-end">
+          <p class="min-w-0 text-sm leading-tight sm:text-right">
+            <span class="block truncate font-medium">{{ auth.currentUser()?.displayName }}</span>
+            <span class="block truncate text-muted">{{ auth.currentUser()?.email }}</span>
+          </p>
+          <button
+            type="button"
+            class="min-h-11 shrink-0 rounded-md border border-line bg-white px-3 text-sm"
+            (click)="logout()"
+          >
+            Sign out
+          </button>
+        </div>
+      }
     </div>
   </header>
-  <main class="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6">
+  <main class="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
     <router-outlet />
   </main>
 </div>
