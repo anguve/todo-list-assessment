@@ -55,3 +55,29 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Local
+.DS_Store
+.vs/
+*.user
+
+# Angular
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+
+# Local
+.DS_Store
+.vs/
+*.user
+
+# Angular
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
