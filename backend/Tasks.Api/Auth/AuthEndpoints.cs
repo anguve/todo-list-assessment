@@ -11,6 +11,9 @@ public static class AuthEndpoints
 {
     private const string InvalidCredentialsMessage = "Email or password is incorrect";
 
+    private static readonly string DummyPasswordHash = new PasswordHasher<ApplicationUser>()
+        .HashPassword(new ApplicationUser(), "timing-equalizer-not-a-user-password");
+
     /// <summary>
     /// Maps registration, sign-in, sign-out, and the current-user route.
     /// </summary>
@@ -22,6 +25,7 @@ public static class AuthEndpoints
         var group = app.MapGroup("/api/auth");
 
         group.MapPost("/register", Register);
+        group.MapPost("/login", Login);
 
         return group;
     }
@@ -102,6 +106,47 @@ public static class AuthEndpoints
 
         ActivityLog.Registered(logger, user.Id, httpContext);
         return Results.Created("/api/auth/me", tokens.CreateResponse(user));
+    }
+
+    /// <summary>
+    /// Signs a user in. Unknown emails and bad passwords return the same 401.
+    /// </summary>
+    /// <param name="request">The submitted email and password.</param>
+    /// <param name="users">The Identity user store.</param>
+    /// <param name="passwordHasher">Used to keep the failure path a similar length.</param>
+    /// <param name="tokens">The token signer.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="httpContext">The current request, used for the audit line.</param>
+    /// <returns>200 with a token, or 401.</returns>
+    /// <author>Andres Gutierrez Velez (sr.willardkraft@gmail.com)</author>
+    private static async Task<IResult> Login(
+        LoginRequest request,
+        UserManager<ApplicationUser> users,
+        IPasswordHasher<ApplicationUser> passwordHasher,
+        JwtTokenService tokens,
+        ILoggerFactory loggerFactory,
+        HttpContext httpContext)
+    {
+        var logger = loggerFactory.CreateLogger(ActivityLog.Category);
+        var emailIsValid = FieldRules.TryEmail(request.Email, out var email, out _);
+        var password = request.Password ?? string.Empty;
+        var user = emailIsValid ? await users.FindByEmailAsync(email) : null;
+
+        if (user is null)
+        {
+            passwordHasher.VerifyHashedPassword(new ApplicationUser(), DummyPasswordHash, password);
+            ActivityLog.SignInFailed(logger, httpContext);
+            return InvalidCredentials();
+        }
+
+        if (!await users.CheckPasswordAsync(user, password))
+        {
+            ActivityLog.SignInFailed(logger, httpContext);
+            return InvalidCredentials();
+        }
+
+        ActivityLog.SignInSucceeded(logger, user.Id, httpContext);
+        return Results.Ok(tokens.CreateResponse(user));
     }
 
     /// <summary>
