@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using Tasks.Api.Auth;
 using Tasks.Api.Data;
+using Tasks.Api.Logging;
 using Tasks.Api.Todos;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -78,9 +80,60 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        var httpContext = context.HttpContext;
+        var logger = httpContext.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger(ActivityLog.Category);
+        ActivityLog.Throttled(logger, httpContext);
+
+        httpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await httpContext.Response.WriteAsJsonAsync(
+            new Microsoft.AspNetCore.Mvc.ProblemDetails
+            {
+                Status = StatusCodes.Status429TooManyRequests,
+                Title = "Too many attempts",
+                Detail = "Wait a moment and try again.",
+            },
+            cancellationToken);
+    };
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ThrottleLimits.PartitionKey(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = ThrottleLimits.Resolve(httpContext, "Throttle:ApiPermitLimit", ThrottleLimits.ApiPermitLimit),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            ThrottleLimits.PartitionKey(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = ThrottleLimits.Resolve(httpContext, "Throttle:AuthPermitLimit", ThrottleLimits.AuthPermitLimit),
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+});
+
 builder.Logging.AddFilter("Microsoft.AspNetCore.Authentication", LogLevel.Warning);
 
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Logging.AddProvider(new AuditFileLogger(
+        Path.Combine(builder.Environment.ContentRootPath, "logs", "fieldbook.log")));
+}
+
 var app = builder.Build();
+
+app.UseMiddleware<ErrorCaptureMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
@@ -89,6 +142,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("frontend");
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();
