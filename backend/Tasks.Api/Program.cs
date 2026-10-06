@@ -46,6 +46,8 @@ builder.Services.AddScoped<ITodoRepository, TodoRepository>();
 
 builder.Services.AddSingleton<JwtTokenService>();
 
+builder.Services.AddSingleton<RevokedTokens>();
+
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -61,6 +63,21 @@ builder.Services
             ValidAudience = jwtOptions.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
             ClockSkew = TimeSpan.FromSeconds(30),
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                var tokenId = context.Principal?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+                var revoked = context.HttpContext.RequestServices.GetRequiredService<RevokedTokens>();
+                if (string.IsNullOrEmpty(tokenId) || revoked.IsRevoked(tokenId))
+                {
+                    context.Fail("The token is no longer valid.");
+                }
+
+                return Task.CompletedTask;
+            },
         };
     });
 

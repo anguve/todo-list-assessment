@@ -26,6 +26,7 @@ public static class AuthEndpoints
 
         group.MapPost("/register", Register).RequireRateLimiting("auth");
         group.MapPost("/login", Login).RequireRateLimiting("auth");
+        group.MapPost("/logout", Logout).RequireAuthorization();
         group.MapGet("/me", Me).RequireAuthorization();
 
         return group;
@@ -148,6 +149,40 @@ public static class AuthEndpoints
 
         ActivityLog.SignInSucceeded(logger, user.Id, httpContext);
         return Results.Ok(tokens.CreateResponse(user));
+    }
+
+    /// <summary>
+    /// Revokes the caller's current token so it cannot be used again.
+    /// </summary>
+    /// <param name="principal">The authenticated caller.</param>
+    /// <param name="revoked">The in-memory list of revoked token ids.</param>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="httpContext">The current request, used for the audit line.</param>
+    /// <returns>204 when the token is revoked.</returns>
+    /// <author>Andres Gutierrez Velez (sr.willardkraft@gmail.com)</author>
+    private static IResult Logout(
+        ClaimsPrincipal principal,
+        RevokedTokens revoked,
+        ILoggerFactory loggerFactory,
+        HttpContext httpContext)
+    {
+        var tokenId = principal.FindFirstValue(JwtRegisteredClaimNames.Jti);
+        var userId = principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (tokenId is null || userId is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var expiresAt = DateTimeOffset.UtcNow.AddHours(1);
+        var exp = principal.FindFirstValue(JwtRegisteredClaimNames.Exp);
+        if (long.TryParse(exp, out var seconds))
+        {
+            expiresAt = DateTimeOffset.FromUnixTimeSeconds(seconds);
+        }
+
+        revoked.Revoke(tokenId, expiresAt);
+        ActivityLog.SignedOut(loggerFactory.CreateLogger(ActivityLog.Category), userId, httpContext);
+        return Results.NoContent();
     }
 
     /// <summary>
