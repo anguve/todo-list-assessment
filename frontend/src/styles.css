@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Avenir Next", "Segoe UI", ui-sans-serif, sans-serif;
+  --color-paper: #f3f0e8;
+  --color-panel: #fbfaf6;
+  --color-ink: #221f1b;
+  --color-line: #ddd6c8;
+  --color-pine: #243f34;
+  --color-muted: #6f675e;
+}
+
+@layer base {
+  html {
+    background: var(--color-paper);
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--color-pine);
+    outline-offset: 2px;
+  }
+}
