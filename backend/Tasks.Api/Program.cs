@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using Tasks.Api.Auth;
 using Tasks.Api.Data;
+using Tasks.Api.Todos;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +39,8 @@ builder.Services.RemoveAll<ILookupNormalizer>();
 builder.Services.AddSingleton<ILookupNormalizer, LowercaseLookupNormalizer>();
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, LetterAndDigitPasswordValidator>();
+
+builder.Services.AddScoped<ITodoRepository, TodoRepository>();
 
 builder.Services.AddSingleton<JwtTokenService>();
 
@@ -93,6 +96,8 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.MapAuthEndpoints();
+
+app.MapTodoEndpoints();
 
 app.Run();
 
