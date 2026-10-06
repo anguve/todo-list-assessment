@@ -43,9 +43,7 @@ builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, LetterAndDigitPasswordValidator>();
 
 builder.Services.AddScoped<ITodoRepository, TodoRepository>();
-
 builder.Services.AddSingleton<JwtTokenService>();
-
 builder.Services.AddSingleton<RevokedTokens>();
 
 builder.Services
@@ -64,7 +62,6 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
             ClockSkew = TimeSpan.FromSeconds(30),
         };
-
         options.Events = new JwtBearerEvents
         {
             OnTokenValidated = context =>
@@ -82,11 +79,8 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
-
 builder.Services.AddProblemDetails();
-
 builder.Services.AddExceptionHandler<ErrorLoggingHandler>();
-
 builder.Services.AddOpenApi();
 
 builder.Services.AddCors(options =>
@@ -143,7 +137,6 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Logging.AddFilter("Microsoft.AspNetCore.Authentication", LogLevel.Warning);
-
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Logging.AddProvider(new AuditFileLogger(
@@ -158,7 +151,6 @@ app.Use(async (context, next) =>
     await next();
 });
 app.UseExceptionHandler();
-
 app.UseMiddleware<ErrorCaptureMiddleware>();
 
 if (!app.Environment.IsEnvironment("Testing"))
@@ -178,17 +170,28 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("frontend");
-
 app.UseRateLimiter();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
-
 app.MapAuthEndpoints();
-
 app.MapTodoEndpoints();
+
+if (app.Environment.IsEnvironment("Testing"))
+{
+    app.MapGet("/api/test/error", Boom);
+}
+
+/// <summary>
+/// Throws on purpose so tests can prove unhandled errors stay off the response.
+/// </summary>
+/// <returns>This method does not return.</returns>
+/// <author>Andres Gutierrez Velez (sr.willardkraft@gmail.com)</author>
+static IResult Boom()
+{
+    throw new InvalidOperationException("boom-marker");
+}
 
 app.Run();
 
