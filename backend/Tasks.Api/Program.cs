@@ -65,6 +65,16 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddOpenApi();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("frontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Logging.AddFilter("Microsoft.AspNetCore.Authentication", LogLevel.Warning);
 
 var app = builder.Build();
@@ -74,10 +84,14 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseCors("frontend");
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+
+app.MapAuthEndpoints();
 
 app.Run();
 
