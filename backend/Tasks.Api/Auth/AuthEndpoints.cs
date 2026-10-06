@@ -26,6 +26,7 @@ public static class AuthEndpoints
 
         group.MapPost("/register", Register);
         group.MapPost("/login", Login);
+        group.MapGet("/me", Me).RequireAuthorization();
 
         return group;
     }
@@ -147,6 +148,25 @@ public static class AuthEndpoints
 
         ActivityLog.SignInSucceeded(logger, user.Id, httpContext);
         return Results.Ok(tokens.CreateResponse(user));
+    }
+
+    /// <summary>
+    /// Returns the profile of the user named by the token.
+    /// </summary>
+    /// <param name="principal">The authenticated caller.</param>
+    /// <param name="users">The Identity user store.</param>
+    /// <returns>200 with the profile, or 401.</returns>
+    /// <author>Andres Gutierrez Velez (sr.willardkraft@gmail.com)</author>
+    private static async Task<IResult> Me(ClaimsPrincipal principal, UserManager<ApplicationUser> users)
+    {
+        var userId = principal.FindFirstValue(JwtRegisteredClaimNames.Sub);
+        if (userId is null)
+        {
+            return Results.Unauthorized();
+        }
+
+        var user = await users.FindByIdAsync(userId);
+        return user is null ? Results.Unauthorized() : Results.Ok(UserResponse.From(user));
     }
 
     /// <summary>

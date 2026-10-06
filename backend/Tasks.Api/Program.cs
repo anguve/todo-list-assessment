@@ -82,6 +82,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    await DevelopmentDataSeeder.SeedAsync(app.Services);
 }
 
 app.UseCors("frontend");
