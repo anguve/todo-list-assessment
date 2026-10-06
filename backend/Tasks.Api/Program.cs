@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using Tasks.Api.Auth;
 using Tasks.Api.Data;
@@ -32,6 +33,11 @@ builder.Services
         options.Password.RequireNonAlphanumeric = false;
     })
     .AddEntityFrameworkStores<AppDbContext>();
+
+builder.Services.RemoveAll<ILookupNormalizer>();
+builder.Services.AddSingleton<ILookupNormalizer, LowercaseLookupNormalizer>();
+builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
+builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, LetterAndDigitPasswordValidator>();
 
 builder.Services.AddSingleton<JwtTokenService>();
 
