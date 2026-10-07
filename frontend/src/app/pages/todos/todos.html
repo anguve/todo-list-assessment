@@ -5,7 +5,7 @@
       <p class="mt-1 text-sm text-muted">Only you can see this list.</p>
     </div>
     @if (!loading()) {
-      <p class="text-sm text-muted">{{ items().length }} open</p>
+      <p class="text-sm text-muted">{{ countLabel() }}</p>
     }
   </div>
 

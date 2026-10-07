@@ -25,7 +25,7 @@ describe('Todos', () => {
     await render();
 
     expect(text()).toContain('Nothing written down yet.');
-    expect(text()).toContain('0 open');
+    expect(text()).toContain('0 tasks');
   });
 
   it('adds a task and then deletes it', async () => {
@@ -48,7 +48,7 @@ describe('Todos', () => {
 
     expect(text()).toContain('Buy coffee');
     expect(text()).toContain('From the shop');
-    expect(text()).toContain('1 open');
+    expect(text()).toContain('1 task');
     expect(text()).toContain('6 Oct');
 
     buttonNamed('Delete').click();

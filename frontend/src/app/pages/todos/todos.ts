@@ -42,6 +42,15 @@ export class Todos {
   }
 
   /**
+   * Writes how many tasks are on the list. One item reads "1 task".
+   * @author Andres Gutierrez Velez <sr.willardkraft@gmail.com>
+   */
+  protected countLabel(): string {
+    const count = this.items().length;
+    return count === 1 ? '1 task' : `${count} tasks`;
+  }
+
+  /**
    * Checks the title and description, then appends the stored task to the list.
    * @author Andres Gutierrez Velez <sr.willardkraft@gmail.com>
    */
